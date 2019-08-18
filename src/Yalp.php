@@ -122,4 +122,26 @@ class Yalp
         return $branch;
     }
 
+    /**
+     * @author  Payam Yasaie <payam@yasaie.ir>
+     * @since   2019-08-18
+     *
+     * @param     $per_page
+     * @param     $count
+     * @param int $current
+     *
+     * @return \stdClass
+     */
+    static public function paginate($per_page, $count, $current = 1)
+    {
+        $page = new \stdClass();
+
+        $page->current = $current > 0 ? $current : 1;
+        $page->perPage = $per_page;
+        $page->items_count = $count;
+        $page->count = (int)ceil($page->items_count / $page->perPage);
+
+        return $page;
+    }
+
 }
