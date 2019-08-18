@@ -98,6 +98,43 @@ class Yalp
 
     /**
      * @author  Payam Yasaie <payam@yasaie.ir>
+     * @since   2019-08-18
+     *
+     * @param $items
+     * @param $names
+     *
+     * @return array|\Illuminate\Support\Collection
+     */
+    static public function flatten($items, $names)
+    {
+        $output = [];
+
+        # Loop trough each item
+        foreach ($items as $item) {
+            # set $output an object
+            $output[$item->id] = new \stdClass();
+            # Loop trough each name for each item
+            foreach ($names as $name) {
+                # if get wasn't set get is the name
+                isset($name['get'])
+                    or $name['get'] = $name['name'];
+                # check if result should be string
+                $is_string = isset($name['string']) and $name['string'];
+                # get item value recursive
+                $output[$item->id]->{$name['name']} = self::dot($item, $name['get'], $is_string);
+            }
+        }
+
+        # if Illuminate Collection was exist return as collection
+        if (class_exists('Illuminate\Support\Collection')) {
+            return collect($output);
+        }
+
+        return $output;
+    }
+
+    /**
+     * @author  Payam Yasaie <payam@yasaie.ir>
      * @since   2019-08-15
      *
      * @param     $elements
