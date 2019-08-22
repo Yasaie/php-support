@@ -14,19 +14,21 @@ class Yalp
 {
 
     /**
-     * @author  Payam Yasaie <payam@yasaie.ir>
-     * @since   2019-08-15
+     * @author      Payam Yasiae <payam@yasaie.ir>
+     * @copyright   2019/08/22
      *
-     * @param      $object
-     * @param      $dots
-     * @param bool $string
+     * @param $object
+     * @param $dots
+     * @param mixed ...$params
      *
-     * @return array|mixed|string|null
+     * @return array|mixed|null
      */
-    static public function dot($object, $dots, $string = false)
+    static public function dot($object, $dots, ...$params)
     {
-        # set item to null if no results found
+        # define variables
         $item = null;
+        $param = [];
+
         # Return object if no dots defined
         if ($dots === '') {
             $item = $object;
@@ -34,15 +36,31 @@ class Yalp
             # Separate dots
             $segments = explode('.', $dots);
 
+            # if empty it is double dot (..) means pipe
+            if (empty($segments[0])) {
+                array_shift($segments);
+
+                # get the function type if exist
+                $func_type = static::parseFunc($segments[0]);
+
+                # check if current is function
+                if ($func_type) {
+                    if ($func_type == 2 and $params) {
+                        $param = array_shift($params);
+                    }
+
+                    $item = (new Pipe($object))->pipe($segments[0], ...$param)->get;
+                }
+            }
             # if * was defined loop through
-            if ($segments[0] == '*') {
+            elseif ($segments[0] == '*') {
                 # Remove first element and glue others
                 array_shift($segments);
                 $right = implode('.', $segments);
                 $item = [];
 
                 foreach ($object as $each) {
-                    $new = static::dot($each, $right, $string);
+                    $new = static::dot($each, $right, ...$params);
 
                     # makes a flat array
                     if (is_array($new)) {
@@ -54,14 +72,20 @@ class Yalp
 
             } else {
                 # check if current index is array
-                if (isset($object[$segments[0]])) {
+                if (is_array($object) and isset($object[$segments[0]])) {
                     $item = $object[$segments[0]];
                 }
 
+                # get the function type if exist
+                $func_type = static::parseFunc($segments[0]);
+
                 # check if current is function
-                if (strpos($segments[0], '()') and !is_array($object)) {
-                    $segments[0] = str_replace('()', '', $segments[0]);
-                    $item = $object->{$segments[0]}();
+                if ($func_type) {
+                    if ($func_type == 2 and $params) {
+                        $param = array_shift($params);
+                    }
+
+                    $item = static::call($object, $segments[0], ...$param);
                 }
 
                 # if item was not set yet try object
@@ -72,25 +96,56 @@ class Yalp
                         unset($e);
                     }
                 }
+            }
 
-                # check if still has child
-                if (count($segments) > 1) {
-                    # remove first index of object for pass to function again
-                    array_shift($segments);
-                    $right = implode('.', $segments);
-                    return static::dot($item, $right, $string);
-                }
+            # check if still has child
+            if (count($segments) > 1) {
+                # remove first index of object for pass to function again
+                array_shift($segments);
+                $right = implode('.', $segments);
+                return static::dot($item, $right, ...$params);
             }
         }
 
         # check if $item is array filter or make string
         if (is_array($item)) {
             $item = array_filter($item);
+        }
 
-            # if string was true array will be string
-            if ($string) {
-                return implode(PHP_EOL, $item);
-            }
+        return $item;
+    }
+
+    /**
+     * @author      Payam Yasiae <payam@yasaie.ir>
+     * @copyright   2019/08/22
+     *
+     * @param string $method
+     * @return int
+     */
+    static public function parseFunc(&$method)
+    {
+        $method = str_replace('()', '', $method, $func);
+        $method = str_replace('($)', '', $method, $func_param);
+
+        return $func ? 1 : ($func_param ? 2 : 0);
+    }
+
+    /**
+     * @author      Payam Yasiae <payam@yasaie.ir>
+     * @copyright   2019/08/22
+     *
+     * @param $object
+     * @param string $method
+     * @param array $param
+     *
+     * @return mixed
+     */
+    static public function call($object, $method, ...$param)
+    {
+        if (is_array($object)) {
+            $item = $object[$method](...$param);
+        } else {
+            $item = $object->$method(...$param);
         }
 
         return $item;
@@ -108,11 +163,14 @@ class Yalp
     static public function flatten($items, $names)
     {
         $output = [];
+        $id = 0;
 
         # Loop trough each item
         foreach ($items as $item) {
+            # if id exist on item set it
+            $id = isset($item->id) ? $item->id : $id;
             # set $output an object
-            $output[$item->id] = new \stdClass();
+            $output[$id] = new \stdClass();
             # Loop trough each name for each item
             foreach ($names as $name) {
                 # if get wasn't set get is the name
@@ -120,9 +178,18 @@ class Yalp
                     or $name['get'] = $name['name'];
                 # check if result should be string
                 $is_string = isset($name['string']) and $name['string'];
+                # check if isset params
+                $params = isset($name['params']) ? $name['params'] : [];
+                if (isset($name['string']) and $name['string']) {
+                    $name['get'] .= '..implode($)';
+                    $params[][] = PHP_EOL;
+                }
+
                 # get item value recursive
-                $output[$item->id]->{$name['name']} = self::dot($item, $name['get'], $is_string);
+                $output[$id]->{$name['name']} = self::dot($item, $name['get'], ...$params);
             }
+
+            $id++;
         }
 
         # if Illuminate Collection was exist return as collection
