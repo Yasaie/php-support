@@ -56,7 +56,16 @@ class Yalp
             elseif ($segments[0] == '*') {
                 # Remove first element and glue others
                 array_shift($segments);
-                $right = implode('.', $segments);
+                $count_empty = array_count_values($segments);
+                $first_empty = array_search('', $segments);
+                $two_empty = (isset($count_empty['']) and $count_empty[''] > 1);
+
+                if ($two_empty) {
+                    $right = implode('.', array_slice($segments, 0, $first_empty));
+                    array_shift($segments);
+                } else {
+                    $right = implode('.', $segments);
+                }
                 $item = [];
 
                 foreach ($object as $each) {
@@ -68,6 +77,10 @@ class Yalp
                     } else {
                         $item[] = $new;
                     }
+                }
+
+                if (! $two_empty) {
+                    return $item;
                 }
 
             } else {
@@ -175,13 +188,13 @@ class Yalp
             foreach ($names as $name) {
                 # if get wasn't set get is the name
                 isset($name['get'])
-                    or $name['get'] = $name['name'];
+                or $name['get'] = $name['name'];
                 # check if result should be string
                 $is_string = isset($name['string']) and $name['string'];
                 # check if isset params
                 $params = isset($name['params']) ? $name['params'] : [];
                 if (isset($name['string']) and $name['string']) {
-                    $name['get'] .= '..implode($)';
+                    $name['get'] .= '...implode($)';
                     $params[][] = PHP_EOL;
                 }
 
