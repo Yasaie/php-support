@@ -180,8 +180,6 @@ class Yalp
 
         # Loop trough each item
         foreach ($items as $item) {
-            # if id exist on item set it
-            $id = isset($item->id) ? $item->id : $id;
             # set $output an object
             $output[$id] = new \stdClass();
             # Loop trough each name for each item
