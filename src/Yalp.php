@@ -155,9 +155,11 @@ class Yalp
      */
     static public function call($object, $method, ...$param)
     {
+        $item = null;
+
         if (is_array($object)) {
             $item = $object[$method](...$param);
-        } else {
+        } elseif ($object) {
             $item = $object->$method(...$param);
         }
 
