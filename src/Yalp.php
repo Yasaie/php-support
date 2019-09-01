@@ -85,11 +85,6 @@ class Yalp
                 }
 
             } else {
-                # check if current index is array
-                if (is_array($object) and isset($object[$segments[0]])) {
-                    $item = $object[$segments[0]];
-                }
-
                 # get the function type if exist
                 $func_type = static::parseFunc($segments[0]);
 
@@ -101,12 +96,12 @@ class Yalp
 
                     $item = static::call($object, $segments[0], ...$param);
                 }
-
-                # if item was not set yet try object
-                elseif (! $item) {
+                else {
+                    # if item was not set yet try object
                     try {
                         $item = $object->{$segments[0]};
                     } catch (\Exception $e) {
+                        # then try array
                         try {
                             $item = $object[$segments[0]];
                         } catch (\Exception $e) {}
