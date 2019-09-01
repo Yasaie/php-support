@@ -32,12 +32,13 @@ class Yalp
         # Return object if no dots defined
         if ($dots === '') {
             $item = $object;
+
         } else {
             # Separate dots
             $segments = explode('.', $dots);
 
             # if empty it is double dot (..) means pipe
-            if (empty($segments[0])) {
+            if ($segments[0] == '') {
                 array_shift($segments);
 
                 # get the function type if exist
@@ -102,10 +103,13 @@ class Yalp
                 }
 
                 # if item was not set yet try object
-                if (!isset($item)) {
+                elseif (! $item) {
                     try {
                         $item = $object->{$segments[0]};
                     } catch (\Exception $e) {
+                        try {
+                            $item = $object[$segments[0]];
+                        } catch (\Exception $e) {}
                         unset($e);
                     }
                 }
